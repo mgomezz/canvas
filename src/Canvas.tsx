@@ -1,11 +1,13 @@
 import { toSvg } from 'html-to-image';
 import React, { useEffect, useRef, useState } from 'react';
-import Moveable, { OnDrag } from 'react-moveable';
+import Moveable, { OnDrag, OnScaleEnd, ScalableEvents, ScalableProps } from 'react-moveable';
 
 interface Item {
     id: string;
     top: number;
     left: number;
+    width: number;
+    height: number;
     color?: string;
     text?: string;
 }
@@ -18,29 +20,60 @@ const ITEM_SIZE = 50;
 const BOUND = CONTAINER_SIZE - ITEM_SIZE;
 
 const initialItems: Item[] = [
-    { id: '1', top: 20, left: 20, color: '#e74c3c', text: 'Hello' },
-    { id: '2', top: 100, left: 200, color: '#3498db', text: 'World' },
+    { id: '1', top: 20, left: 20, width: 50, height: 50, color: '#e74c3c', text: 'Hello' },
+    { id: '2', top: 100, left: 200, width: 50, height: 50, color: '#3498db', text: 'World' },
 ];
 
 const Canvas: React.FC = () => {
     const [isPanning, setIsPanning] = useState(false);
-
     const [translate, setTranslate] = useState({ x: 0, y: 0 });
     const [scale, setScale] = useState(1);
-    // transform-origin in percent; default to center
     const [origin, setOrigin] = useState({ x: 50, y: 50 });
-    const downloadSvgRef = useRef<HTMLDivElement>(null);
 
-    const targetRef = useRef<HTMLDivElement>(null);
-    const moveableRef = useRef<Moveable>(null);
+    // History stacks for undo/redo
+    const [past, setPast] = useState<Item[][]>([]);
+    const [future, setFuture] = useState<Item[][]>([]);
+
+    // The “present” items
     const [items, setItems] = useState<Item[]>(initialItems);
+
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [showInput, setShowInput] = useState(false);
     const [inputValue, setInputValue] = useState('');
 
+    const downloadSvgRef = useRef<HTMLDivElement>(null);
+    const targetRef = useRef<HTMLDivElement>(null);
+    const moveableRef = useRef<Moveable>(null);
+
     const selectedRef = selectedId
         ? targetRef.current?.querySelector<HTMLDivElement>(`#item-${selectedId}`) ?? null
         : null;
+
+    // Helper to push current state into past, clear future, then update items
+    const updateItems = (updater: (prev: Item[]) => Item[]) => {
+        setPast(p => [...p, items]);
+        setFuture([]);
+        setItems(prev => updater(prev));
+    };
+
+    // Undo & redo handlers
+    const handleUndo = () => {
+        if (past.length === 0) return;
+        const previous = past[past.length - 1];
+        setPast(past.slice(0, -1));
+        setFuture(f => [items, ...f]);
+        setItems(previous);
+        setSelectedId(null);
+    };
+
+    const handleRedo = () => {
+        if (future.length === 0) return;
+        const next = future[0];
+        setFuture(future.slice(1));
+        setPast(p => [...p, items]);
+        setItems(next);
+        setSelectedId(null);
+    };
 
     const onSelect = (id: string) => {
         setSelectedId(id);
@@ -59,16 +92,16 @@ const Canvas: React.FC = () => {
         if (!lastEvent || !selectedId) return;
         const newLeft = lastEvent.left;
         const newTop = lastEvent.top;
-        setItems(prev => prev.map(it => (it.id === selectedId ? { ...it, left: newLeft, top: newTop } : it)));
+        updateItems(prev => prev.map(it => (it.id === selectedId ? { ...it, left: newLeft, top: newTop } : it)));
     };
 
-    // zoom around container center, so whatever is currently in middle stays in middle
+
+
     const zoomCenter = (direction: number) => {
         const prev = scale;
         const next = Math.min(ZOOM_MAX_SCALE, Math.max(ZOOM_MIN_SCALE, scale + direction * ZOOM_STEP));
         if (next === prev) return;
 
-        // always center in percent
         setOrigin({ x: 50, y: 50 });
         setScale(next);
     };
@@ -79,7 +112,6 @@ const Canvas: React.FC = () => {
         setSelectedId(null);
     };
 
-    // optional wheel support
     const onWheel = (e: any) => {
         e.preventDefault();
         const dir = e.deltaY < 0 ? +1 : -1;
@@ -97,12 +129,14 @@ const Canvas: React.FC = () => {
     const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = e => {
         if (e.key === 'Enter' && inputValue.trim()) {
             const id = Date.now().toString();
-            setItems(prev => [
+            updateItems(prev => [
                 ...prev,
                 {
                     id,
-                    top: 10,
-                    left: 10,
+                    top: 15,
+                    left: 15,
+                    width: 50,
+                    height: 50,
                     text: inputValue.trim(),
                     color: `hsl(${Math.random() * 360}, 100%, 50%)`,
                 },
@@ -118,7 +152,6 @@ const Canvas: React.FC = () => {
 
     const downloadSvg = () => {
         if (!downloadSvgRef.current) return;
-
         toSvg(downloadSvgRef.current)
             .then(dataUrl => {
                 const a = document.createElement('a');
@@ -172,7 +205,10 @@ const Canvas: React.FC = () => {
                                 style={{
                                     top: it.top,
                                     left: it.left,
+                                    width: it.width,
+                                    height: it.height,
                                     backgroundColor: it.color,
+                                    position: 'absolute',
                                 }}
                                 onClick={e => {
                                     e.stopPropagation();
@@ -231,7 +267,8 @@ const Canvas: React.FC = () => {
                     </div>
                 </div>
             </div>
-            {/* Zoom buttons */}
+
+            {/* Toolbar */}
             <div
                 style={{
                     position: 'absolute',
@@ -245,6 +282,12 @@ const Canvas: React.FC = () => {
                 <button onClick={() => zoomCenter(-1)}>–</button>
                 <button onClick={() => zoomCenter(+1)}>+</button>
                 <button onClick={downloadSvg}>Download as SVG</button>
+                <button onClick={handleUndo} disabled={past.length === 0}>
+                    Undo
+                </button>
+                <button onClick={handleRedo} disabled={future.length === 0}>
+                    Redo
+                </button>
                 <div>
                     <button onClick={handleAddText}>Add Text</button>
                     {showInput && (

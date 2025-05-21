@@ -6,7 +6,6 @@ const App: React.FC = () => {
         <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
             <Canvas />
         </div>
-        // <FabricLimitedCanvas />
     );
 };
 
