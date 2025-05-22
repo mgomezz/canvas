@@ -15,6 +15,11 @@ h1 {
 }
 
 .item {
+    display: flex;
+    vertical-align: middle;
+    align-items: center;
+    align-content: center;
+    text-align: center;
     width: fit-content;
     height: fit-content;
     position: absolute;
@@ -28,17 +33,3 @@ h1 {
     cursor: move;
 }
 
-.target {
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    top: 150px;
-    left: 100px;
-    line-height: 100px;
-    text-align: center;
-    background: #ee8;
-    color: #333;
-    font-weight: bold;
-    border: 1px solid #333;
-    box-sizing: border-box;
-}

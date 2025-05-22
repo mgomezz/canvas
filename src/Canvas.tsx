@@ -6,8 +6,8 @@ interface Item {
     id: string;
     top: number;
     left: number;
-    width: number;
-    height: number;
+    width?: number;
+    height?: number;
     color?: string;
     text?: string;
 }
@@ -17,8 +17,8 @@ const ZOOM_MIN_SCALE = 0.5;
 const ZOOM_STEP = 0.1;
 
 const initialItems: Item[] = [
-    { id: '1', top: 0, left: 0, width: 50, height: 50, color: '#e74c3c', text: 'Hello' },
-    { id: '2', top: 100, left: 200, width: 50, height: 50, color: '#3498db', text: 'World' },
+    { id: '1', top: 0, left: 0, color: '#e74c3c', text: 'Hello' },
+    { id: '2', top: 100, left: 200, color: '#3498db', text: 'World' },
 ];
 
 const Canvas: React.FC = () => {
@@ -151,8 +151,8 @@ const Canvas: React.FC = () => {
                     id,
                     top: 15,
                     left: 15,
-                    width: 50,
-                    height: 50,
+                    // width: 50,
+                    // height: 50,
                     text: inputValue.trim(),
                     color: `hsl(${Math.random() * 360}, 100%, 50%)`,
                 },
