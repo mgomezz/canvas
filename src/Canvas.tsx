@@ -15,9 +15,6 @@ interface Item {
 const ZOOM_MAX_SCALE = 1.5;
 const ZOOM_MIN_SCALE = 0.5;
 const ZOOM_STEP = 0.1;
-const CONTAINER_SIZE = 400;
-const ITEM_SIZE = 50;
-const BOUND = CONTAINER_SIZE - ITEM_SIZE;
 
 const initialItems: Item[] = [
     { id: '1', top: 20, left: 20, width: 50, height: 50, color: '#e74c3c', text: 'Hello' },
@@ -25,29 +22,46 @@ const initialItems: Item[] = [
 ];
 
 const Canvas: React.FC = () => {
-    const [isPanning, setIsPanning] = useState(false);
-    const [translate, setTranslate] = useState({ x: 0, y: 0 });
-    const [scale, setScale] = useState(1);
-    const [origin, setOrigin] = useState({ x: 50, y: 50 });
+    const downloadSvgRef = useRef<HTMLDivElement>(null);
+    const targetRef = useRef<HTMLDivElement>(null);
+    const moveableRef = useRef<Moveable>(null);
 
-    // History stacks for undo/redo
+    const [items, setItems] = useState<Item[]>(initialItems);
     const [past, setPast] = useState<Item[][]>([]);
     const [future, setFuture] = useState<Item[][]>([]);
-
-    // The “present” items
-    const [items, setItems] = useState<Item[]>(initialItems);
 
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [showInput, setShowInput] = useState(false);
     const [inputValue, setInputValue] = useState('');
 
-    const downloadSvgRef = useRef<HTMLDivElement>(null);
-    const targetRef = useRef<HTMLDivElement>(null);
-    const moveableRef = useRef<Moveable>(null);
+    const [scale, setScale] = useState(1);
+    const [origin, setOrigin] = useState({ x: 50, y: 50 });
 
-    const selectedRef = selectedId
-        ? targetRef.current?.querySelector<HTMLDivElement>(`#item-${selectedId}`) ?? null
-        : null;
+    // dynamic bounds measured from downloadSvgRef
+    const [bounds, setBounds] = useState<{
+        left: number;
+        top: number;
+        right: number;
+        bottom: number;
+    }>({ left: 0, top: 0, right: 0, bottom: 0 });
+
+    // Update bounds dynamically based on downloadSvgRef size
+    useEffect(() => {
+        const updateBounds = () => {
+            if (!downloadSvgRef.current) return;
+            const rect = downloadSvgRef.current.getBoundingClientRect();
+            setBounds({
+                left: rect.left,
+                top: rect.top,
+                right: rect.left + rect.width,
+                bottom: rect.top + rect.height,
+            });
+        };
+
+        updateBounds();
+        window.addEventListener('resize', updateBounds);
+        return () => window.removeEventListener('resize', updateBounds);
+    }, []);
 
     // Helper to push current state into past, clear future, then update items
     const updateItems = (updater: (prev: Item[]) => Item[]) => {
@@ -75,6 +89,25 @@ const Canvas: React.FC = () => {
         setSelectedId(null);
     };
 
+    // Bring to front / send to back
+    const handleBringToFront = () => {
+        if (!selectedId) return;
+        updateItems(prev => {
+            const item = prev.find(it => it.id === selectedId);
+            const others = prev.filter(it => it.id !== selectedId);
+            return item ? [...others, item] : prev;
+        });
+    };
+
+    const handleSendToBack = () => {
+        if (!selectedId) return;
+        updateItems(prev => {
+            const item = prev.find(it => it.id === selectedId);
+            const others = prev.filter(it => it.id !== selectedId);
+            return item ? [item, ...others] : prev;
+        });
+    };
+
     const onSelect = (id: string) => {
         setSelectedId(id);
         setShowInput(false);
@@ -95,15 +128,16 @@ const Canvas: React.FC = () => {
         updateItems(prev => prev.map(it => (it.id === selectedId ? { ...it, left: newLeft, top: newTop } : it)));
     };
 
-
+    const onScaleEnd = (e: OnScaleEnd) => {
+        //TODO:implement scale end logic
+    };
 
     const zoomCenter = (direction: number) => {
-        const prev = scale;
-        const next = Math.min(ZOOM_MAX_SCALE, Math.max(ZOOM_MIN_SCALE, scale + direction * ZOOM_STEP));
-        if (next === prev) return;
-
+        const prevScale = scale;
+        const nextScale = Math.min(ZOOM_MAX_SCALE, Math.max(ZOOM_MIN_SCALE, scale + direction * ZOOM_STEP));
+        if (nextScale === prevScale) return;
         setOrigin({ x: 50, y: 50 });
-        setScale(next);
+        setScale(nextScale);
     };
 
     const handleAddText = () => {
@@ -162,6 +196,13 @@ const Canvas: React.FC = () => {
             .catch(err => console.error('oops, failed to export as SVG', err));
     };
 
+    const selectedRef = selectedId
+        ? targetRef.current?.querySelector<HTMLDivElement>(`#item-${selectedId}`) ?? null
+        : null;
+
+    // Build dynamic elementGuidelines for snapping (all other items)
+    const guidelines = items.filter(it => it.id !== selectedId).map(it => `#item-${it.id}`);
+
     return (
         <div className="root">
             <div
@@ -184,9 +225,10 @@ const Canvas: React.FC = () => {
                         width: '50vw',
                         height: '50vh',
                         border: '2px dashed #298B15',
-                        transform: `scale(${scale}) translate(${translate.x / scale}px, ${translate.y / scale}px)`,
+                        transform: `scale(${scale})`,
                         transformOrigin: `${origin.x}% ${origin.y}%`,
-                        transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+                        transition: 'transform 0.1s ease-out',
+                        position: 'relative',
                     }}
                 >
                     <div
@@ -195,9 +237,10 @@ const Canvas: React.FC = () => {
                             height: '94%',
                             margin: '14px',
                             border: '2px dashed red',
+                            position: 'relative',
                         }}
                     >
-                        {items.map(it => (
+                        {items.map((it, idx) => (
                             <div
                                 key={it.id}
                                 id={`item-${it.id}`}
@@ -209,6 +252,7 @@ const Canvas: React.FC = () => {
                                     height: it.height,
                                     backgroundColor: it.color,
                                     position: 'absolute',
+                                    zIndex: idx,
                                 }}
                                 onClick={e => {
                                     e.stopPropagation();
@@ -218,32 +262,21 @@ const Canvas: React.FC = () => {
                                 {it.text && <span>{it.text}</span>}
                             </div>
                         ))}
-                        <div className="target element1">Elemento de referencia</div>
                         {selectedRef && (
                             <Moveable
                                 ref={moveableRef}
                                 target={selectedRef}
-                                draggable={true}
-                                rotatable={true}
+                                draggable
+                                scalable
+                                rotatable
                                 throttleDrag={1}
-                                edgeDraggable={false}
-                                startDragRotate={0}
-                                throttleDragRotate={0}
-                                scalable={true}
-                                keepRatio={false}
                                 throttleScale={0}
-                                snappable={true}
-                                isDisplaySnapDigit={true}
-                                isDisplayInnerSnapDigit={false}
-                                snapGap={true}
-                                snapDirections={{
-                                    top: true,
-                                    left: true,
-                                    bottom: true,
-                                    right: true,
-                                    center: true,
-                                    middle: true,
-                                }}
+                                throttleDragRotate={0}
+                                edgeDraggable={false}
+                                snappable
+                                snapGap
+                                bounds={bounds}
+                                elementGuidelines={guidelines}
                                 elementSnapDirections={{
                                     top: true,
                                     left: true,
@@ -252,13 +285,12 @@ const Canvas: React.FC = () => {
                                     center: true,
                                     middle: true,
                                 }}
-                                bounds={{ left: 17, top: 17, right: 11, bottom: 11, position: 'css' }}
-                                elementGuidelines={['.element1', '.element2', '.element3']}
                                 onDrag={onDrag}
                                 onDragEnd={onDragEnd}
                                 onScale={e => {
                                     e.target.style.transform = e.drag.transform;
                                 }}
+                                onScaleEnd={onScaleEnd}
                                 onRotate={e => {
                                     e.target.style.transform = e.drag.transform;
                                 }}
@@ -273,10 +305,11 @@ const Canvas: React.FC = () => {
                 style={{
                     position: 'absolute',
                     bottom: 50,
-                    left: '48vw',
+                    left: '37%',
                     zIndex: 10,
                     display: 'flex',
                     flexDirection: 'row',
+                    gap: '4px',
                 }}
             >
                 <button onClick={() => zoomCenter(-1)}>–</button>
@@ -287,6 +320,12 @@ const Canvas: React.FC = () => {
                 </button>
                 <button onClick={handleRedo} disabled={future.length === 0}>
                     Redo
+                </button>
+                <button onClick={handleBringToFront} disabled={!selectedId}>
+                    Bring to Front
+                </button>
+                <button onClick={handleSendToBack} disabled={!selectedId}>
+                    Send to Back
                 </button>
                 <div>
                     <button onClick={handleAddText}>Add Text</button>
