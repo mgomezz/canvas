@@ -207,7 +207,7 @@ const Canvas: React.FC = () => {
                     style={{
                         width: '50vw',
                         height: '50vh',
-                        border: '2px dashed #298B15',
+                        border: '3px dashed #298B15',
                         transform: `scale(${scale})`,
                         transformOrigin: `${origin.x}% ${origin.y}%`,
                         transition: 'transform 0.1s ease-out',
@@ -220,7 +220,7 @@ const Canvas: React.FC = () => {
                             width: '97%',
                             height: '94%',
                             margin: '14px',
-                            border: '2px dashed red',
+                            border: '3px dashed red',
                             position: 'relative',
                         }}
                     >
