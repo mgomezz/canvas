@@ -1,6 +1,6 @@
 import { toSvg } from 'html-to-image';
 import React, { useEffect, useRef, useState } from 'react';
-import Moveable, { OnDrag, OnScaleEnd, ScalableEvents, ScalableProps } from 'react-moveable';
+import Moveable, { BoundType, OnDrag, OnScaleEnd } from 'react-moveable';
 
 interface Item {
     id: string;
@@ -17,7 +17,7 @@ const ZOOM_MIN_SCALE = 0.5;
 const ZOOM_STEP = 0.1;
 
 const initialItems: Item[] = [
-    { id: '1', top: 20, left: 20, width: 50, height: 50, color: '#e74c3c', text: 'Hello' },
+    { id: '1', top: 0, left: 0, width: 50, height: 50, color: '#e74c3c', text: 'Hello' },
     { id: '2', top: 100, left: 200, width: 50, height: 50, color: '#3498db', text: 'World' },
 ];
 
@@ -36,32 +36,14 @@ const Canvas: React.FC = () => {
 
     const [scale, setScale] = useState(1);
     const [origin, setOrigin] = useState({ x: 50, y: 50 });
-
     // dynamic bounds measured from downloadSvgRef
-    const [bounds, setBounds] = useState<{
-        left: number;
-        top: number;
-        right: number;
-        bottom: number;
-    }>({ left: 0, top: 0, right: 0, bottom: 0 });
-
-    // Update bounds dynamically based on downloadSvgRef size
-    useEffect(() => {
-        const updateBounds = () => {
-            if (!downloadSvgRef.current) return;
-            const rect = downloadSvgRef.current.getBoundingClientRect();
-            setBounds({
-                left: rect.left,
-                top: rect.top,
-                right: rect.left + rect.width,
-                bottom: rect.top + rect.height,
-            });
-        };
-
-        updateBounds();
-        window.addEventListener('resize', updateBounds);
-        return () => window.removeEventListener('resize', updateBounds);
-    }, []);
+    const [bounds, setBounds] = useState<BoundType>({
+        left: 2,
+        top: 2,
+        right: -2,
+        bottom: -2,
+        position: 'css',
+    });
 
     // Helper to push current state into past, clear future, then update items
     const updateItems = (updater: (prev: Item[]) => Item[]) => {
@@ -129,7 +111,7 @@ const Canvas: React.FC = () => {
     };
 
     const onScaleEnd = (e: OnScaleEnd) => {
-        //TODO:implement scale end logic
+        //TODO: implement scaling with redo and undo
     };
 
     const zoomCenter = (direction: number) => {
@@ -215,6 +197,7 @@ const Canvas: React.FC = () => {
                     alignItems: 'center',
                     flexDirection: 'row',
                     justifyContent: 'center',
+                    position: 'relative',
                 }}
                 onClick={() => setSelectedId(null)}
                 ref={targetRef}
@@ -232,6 +215,7 @@ const Canvas: React.FC = () => {
                     }}
                 >
                     <div
+                        className="snapContainer"
                         style={{
                             width: '97%',
                             height: '94%',
@@ -251,7 +235,6 @@ const Canvas: React.FC = () => {
                                     width: it.width,
                                     height: it.height,
                                     backgroundColor: it.color,
-                                    position: 'absolute',
                                     zIndex: idx,
                                 }}
                                 onClick={e => {
@@ -266,10 +249,11 @@ const Canvas: React.FC = () => {
                             <Moveable
                                 ref={moveableRef}
                                 target={selectedRef}
+                                keepRatio={false}
                                 draggable
                                 scalable
                                 rotatable
-                                throttleDrag={1}
+                                throttleDrag={0}
                                 throttleScale={0}
                                 throttleDragRotate={0}
                                 edgeDraggable={false}
@@ -285,6 +269,7 @@ const Canvas: React.FC = () => {
                                     center: true,
                                     middle: true,
                                 }}
+                                snapDirections={{ top: true, left: true, bottom: true, right: true }}
                                 onDrag={onDrag}
                                 onDragEnd={onDragEnd}
                                 onScale={e => {
