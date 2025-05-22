@@ -36,7 +36,7 @@ const Canvas: React.FC = () => {
 
     const [scale, setScale] = useState(1);
     const [origin, setOrigin] = useState({ x: 50, y: 50 });
-    // dynamic bounds measured from downloadSvgRef
+
     const [bounds, setBounds] = useState<BoundType>({
         left: 1,
         top: 1,
@@ -151,8 +151,6 @@ const Canvas: React.FC = () => {
                     id,
                     top: 15,
                     left: 15,
-                    // width: 50,
-                    // height: 50,
                     text: inputValue.trim(),
                     color: `hsl(${Math.random() * 360}, 100%, 50%)`,
                 },
@@ -293,7 +291,6 @@ const Canvas: React.FC = () => {
                 </div>
             </div>
 
-            {/* Toolbar */}
             <div
                 style={{
                     position: 'absolute',
