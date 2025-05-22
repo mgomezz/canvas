@@ -38,10 +38,10 @@ const Canvas: React.FC = () => {
     const [origin, setOrigin] = useState({ x: 50, y: 50 });
     // dynamic bounds measured from downloadSvgRef
     const [bounds, setBounds] = useState<BoundType>({
-        left: 2,
-        top: 2,
+        left: 1,
+        top: 1,
         right: -2,
-        bottom: -2,
+        bottom: 0,
         position: 'css',
     });
 
@@ -168,14 +168,22 @@ const Canvas: React.FC = () => {
 
     const downloadSvg = () => {
         if (!downloadSvgRef.current) return;
-        toSvg(downloadSvgRef.current)
-            .then(dataUrl => {
-                const a = document.createElement('a');
-                a.href = dataUrl;
-                a.download = 'snapshot.svg';
-                a.click();
-            })
-            .catch(err => console.error('oops, failed to export as SVG', err));
+
+        // Temporarily reset the scale and origin to default values
+        setScale(1);
+        setOrigin({ x: 50, y: 50 });
+        const downloadElement = downloadSvgRef.current;
+
+        setTimeout(() => {
+            toSvg(downloadElement)
+                .then(dataUrl => {
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = 'snapshot.svg';
+                    a.click();
+                })
+                .catch(err => console.error('oops, failed to export as SVG', err));
+        }, 300);
     };
 
     const selectedRef = selectedId
@@ -207,7 +215,7 @@ const Canvas: React.FC = () => {
                     style={{
                         width: '50vw',
                         height: '50vh',
-                        border: '3px dashed #298B15',
+                        border: '1px dashed #298B15',
                         transform: `scale(${scale})`,
                         transformOrigin: `${origin.x}% ${origin.y}%`,
                         transition: 'transform 0.1s ease-out',
@@ -220,7 +228,7 @@ const Canvas: React.FC = () => {
                             width: '97%',
                             height: '94%',
                             margin: '14px',
-                            border: '3px dashed red',
+                            border: '1px dashed red',
                             position: 'relative',
                         }}
                     >
