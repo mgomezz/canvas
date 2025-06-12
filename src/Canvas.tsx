@@ -17,8 +17,8 @@ const ZOOM_MIN_SCALE = 0.5;
 const ZOOM_STEP = 0.1;
 
 const initialItems: Item[] = [
-    { id: '1', top: 0, left: 0, color: '#e74c3c', text: 'Hello' },
-    { id: '2', top: 100, left: 200, color: '#3498db', text: 'World' },
+    { id: '1', top: 0, left: 0, width: 200, height: 100, color: '#e74c3c', text: 'Hello' },
+    { id: '2', top: 100, left: 200, width: 200, height: 100, color: '#3498db', text: 'World' },
 ];
 
 const Canvas: React.FC = () => {
@@ -192,7 +192,7 @@ const Canvas: React.FC = () => {
     const guidelines = items.filter(it => it.id !== selectedId).map(it => `#item-${it.id}`);
 
     return (
-        <div className="root">
+        <div>
             <div
                 className="drawer-container"
                 style={{
