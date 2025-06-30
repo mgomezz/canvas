@@ -7,7 +7,7 @@
  * - Double-click to reset zoom to 1x and center the view
  * - Smooth zooming using SVG viewBox manipulation
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 type Props = {
     pathD: string; // SVG path data for the area
@@ -140,14 +140,14 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svg
     }
 
     // Handle mouse wheel for zooming
-    function handleWheel(e: WheelEvent) {
+    const handleWheel = useCallback((e: WheelEvent) => {
         e.preventDefault();
         const direction = e.deltaY < 0 ? 1 : -1; // Scroll up = zoom in, scroll down = zoom out
-        const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom + direction * ZOOM_STEP));
-        if (newZoom !== zoom) {
-            setZoom(newZoom);
-        }
-    }
+        setZoom(currentZoom => {
+            const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, currentZoom + direction * ZOOM_STEP));
+            return newZoom;
+        });
+    }, [ZOOM_MIN, ZOOM_MAX, ZOOM_STEP]);
 
     // Handle double-click to reset zoom
     function handleDoubleClick(e: React.MouseEvent) {
@@ -179,7 +179,7 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svg
 
         svg.addEventListener('wheel', handleWheel, { passive: false });
         return () => svg.removeEventListener('wheel', handleWheel);
-    }, [zoom]); // Include zoom in dependencies to update handler when zoom changes
+    }, [handleWheel]);
 
     return (
         <div style={{ position: 'relative', width }}>
