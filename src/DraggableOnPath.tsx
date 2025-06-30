@@ -1,87 +1,111 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
-export default function DraggableOnPath() {
-    const [pos, setPos] = useState({ x: 200, y: 200 });
-    const svgPathRef = useRef<SVGPathElement | null>(null);
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+type Props = {
+    pathD: string; // SVG path data for the area
+    initialPos: { x: number; y: number };
+    radius: number;
+    width: number;
+};
+
+export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, radius, width }) => {
+    const [pos, setPos] = useState(initialPos);
     const dragging = useRef(false);
+    const svgRef = useRef<SVGSVGElement>(null);
+    const svgPathRef = useRef<SVGPathElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    // Draw the path on the canvas for hit testing
+    // Helper to convert mouse event to SVG coords
+    function getSVGPointFromEvent(e: MouseEvent | React.MouseEvent) {
+        if (!svgRef.current) return null;
+        const pt = svgRef.current.createSVGPoint();
+        pt.x = (e as MouseEvent).clientX;
+        pt.y = (e as MouseEvent).clientY;
+        const ctm = svgRef.current.getScreenCTM();
+        if (!ctm) return null;
+        return pt.matrixTransform(ctm.inverse());
+    }
+
+    // Checks if a circle is fully inside the path area
+    function isCircleFullyInsidePath(
+        x: number,
+        y: number,
+        radius: number,
+        path2d: Path2D,
+        ctx: CanvasRenderingContext2D,
+    ) {
+        const steps = 12; // test 12 points around circle
+        for (let i = 0; i < steps; i++) {
+            const angle = (2 * Math.PI * i) / steps;
+            const px = x + radius * Math.cos(angle);
+            const py = y + radius * Math.sin(angle);
+            if (!ctx.isPointInPath(path2d, px, py)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function handleMouseDown(e: React.MouseEvent) {
+        e.preventDefault();
+        dragging.current = true;
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    function handleMouseMove(e: MouseEvent) {
+        if (!dragging.current) return;
+        const point = getSVGPointFromEvent(e);
+        if (!point) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const path2d = new window.Path2D(pathD);
+        if (isCircleFullyInsidePath(point.x, point.y, radius, path2d, ctx)) {
+            setPos({ x: point.x, y: point.y });
+        }
+    }
+
+    function handleMouseUp() {
+        dragging.current = false;
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    // Draw the path on canvas for hit testing (not visible)
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        const path = svgPathRef.current;
-        if (!path) return;
-        const d = path.getAttribute('d');
-        if (!d) return;
-        const path2d = new window.Path2D(d);
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = path.getAttribute('stroke') || 'black';
-        ctx.lineWidth = Number(path.getAttribute('stroke-width')) || 1;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        ctx.clearRect(0, 0, width, 0);
+        const path2d = new window.Path2D(pathD);
+        ctx.save();
+        ctx.fillStyle = '#ccc';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.fill(path2d);
         ctx.stroke(path2d);
-    }, []);
-
-    function isOnStroke(x: number, y: number) {
-        const canvas = canvasRef.current;
-        if (!canvas) return false;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return false;
-        const path = svgPathRef.current;
-        if (!path) return false;
-        const d = path.getAttribute('d');
-        if (!d) return false;
-        const path2d = new window.Path2D(d);
-        ctx.lineWidth = Number(path.getAttribute('stroke-width')) || 1;
-        return ctx.isPointInStroke(path2d, x, y);
-    }
-
-    function handleMouseMove(e: { clientX: number; clientY: number }) {
-        if (!dragging.current) return;
-        if (!svgPathRef.current || !svgPathRef.current.ownerSVGElement) return;
-        const svg = svgPathRef.current.ownerSVGElement;
-        const pt = svg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const ctm = svg.getScreenCTM();
-        if (!ctm) return;
-        const { x, y } = pt.matrixTransform(ctm.inverse());
-        if (isOnStroke(x, y)) {
-            setPos({ x, y });
-        }
-    }
-
-    function startDrag() {
-        dragging.current = true;
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', stopDrag);
-    }
-
-    function stopDrag() {
-        dragging.current = false;
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', stopDrag);
-    }
+        ctx.restore();
+    }, [pathD, width, 0]);
 
     return (
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', width }}>
             {/* Hidden canvas for hit testing */}
-            <canvas ref={canvasRef} width={400} height={400} style={{ display: 'none' }} />
-            <svg width={400} height={400} style={{ border: '1px solid gray' }}>
-                <path
-                    ref={svgPathRef}
-                    d="M50,200 Q200,50 350,200 Q200,350 50,200 Z"
-                    stroke="blue"
-                    strokeWidth={10}
-                    fill="none"
+            <canvas ref={canvasRef} width={width} style={{ display: 'none' }} />
+            <svg ref={svgRef} viewBox="0 0 1512.41 3927.08">
+                <path ref={svgPathRef} d={pathD} fill="#eee" stroke="#444" strokeWidth={2} />
+                <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={radius}
+                    fill="#3498db"
+                    stroke="#2c3e50"
+                    strokeWidth={2}
+                    onMouseDown={handleMouseDown}
+                    style={{ cursor: 'pointer' }}
                 />
-                {/* Draggable element */}
-                <circle cx={pos.x} cy={pos.y} r={8} fill="red" style={{ cursor: 'pointer' }} onMouseDown={startDrag} />
             </svg>
         </div>
     );
-}
+};
