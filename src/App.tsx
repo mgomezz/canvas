@@ -1,13 +1,10 @@
 import React from 'react';
-import Canvas from './Canvas';
 import BannerGota from './BannerGota';
+import DraggableOnPath from './DraggableOnPath';
 
 const App: React.FC = () => {
-    return (
-        <div style={{ width: '100vw', height: '100vh' }}>
-            <BannerGota />
-        </div>
-    );
+    // return <BannerGota />;
+    return <DraggableOnPath />;
 };
 
 export default App;
