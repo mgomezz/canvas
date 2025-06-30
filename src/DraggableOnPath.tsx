@@ -22,7 +22,7 @@ export const DraggableOnPath: React.FC<Props> = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Helper to convert mouse event to SVG coords
-    function getSVGPointFromEvent(e: MouseEvent | React.MouseEvent) {
+    const getSVGPointFromEvent = (e: MouseEvent | React.MouseEvent) => {
         if (!svgRef.current) return null;
         const pt = svgRef.current.createSVGPoint();
         pt.x = (e as MouseEvent).clientX;
@@ -30,16 +30,16 @@ export const DraggableOnPath: React.FC<Props> = ({
         const ctm = svgRef.current.getScreenCTM();
         if (!ctm) return null;
         return pt.matrixTransform(ctm.inverse());
-    }
+    };
 
     // Checks if a circle is fully inside the path area
-    function isCircleFullyInsidePath(
+    const isCircleFullyInsidePath = (
         x: number,
         y: number,
         radius: number,
         path2d: Path2D,
         ctx: CanvasRenderingContext2D,
-    ) {
+    ) => {
         const steps = 12; // test 12 points around circle
         for (let i = 0; i < steps; i++) {
             const angle = (2 * Math.PI * i) / steps;
@@ -50,40 +50,16 @@ export const DraggableOnPath: React.FC<Props> = ({
             }
         }
         return true;
-    }
+    };
 
-    // Checks if a rectangle is fully inside the path area
-    function isRectFullyInsidePath(
-        x: number, // top-left x of the div (in SVG coordinates)
-        y: number, // top-left y of the div (in SVG coordinates)
-        width: number, // width of the div
-        height: number, // height of the div
-        path2d: Path2D,
-        ctx: CanvasRenderingContext2D,
-    ) {
-        // Test all corners of the rectangle
-        const points = [
-            [x, y], // top-left
-            [x + width, y], // top-right
-            [x, y + height], // bottom-left
-            [x + width, y + height], // bottom-right
-        ];
-        for (const [px, py] of points) {
-            if (!ctx.isPointInPath(path2d, px, py)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    function handleMouseDown(e: React.MouseEvent) {
+    const handleMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
         dragging.current = true;
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
-    }
+    };
 
-    function handleMouseMove(e: MouseEvent) {
+    const handleMouseMove = (e: MouseEvent) => {
         if (!dragging.current) return;
         const point = getSVGPointFromEvent(e);
         if (!point) return;
@@ -98,15 +74,15 @@ export const DraggableOnPath: React.FC<Props> = ({
         if (isCircleFullyInsidePath(point.x, point.y, 20, path2d, ctx)) {
             setPos({ x: point.x, y: point.y });
         }
-    }
+    };
 
-    function handleMouseUp() {
+    const handleMouseUp = () => {
         dragging.current = false;
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
-    }
+    };
 
-    // Draw the path on canvas for hit testing (not visible)
+    // Draw the path on canvas (not visible)
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -124,7 +100,7 @@ export const DraggableOnPath: React.FC<Props> = ({
     }, [pathDraggableAndEditable, width, 0]);
 
     return (
-        <div style={{ position: 'relative', width }}>
+        <div style={{ width, margin: '0 auto' }}>
             {/* Hidden canvas to get svg data*/}
             <canvas ref={canvasRef} width={width} style={{ display: 'none' }} />
 
