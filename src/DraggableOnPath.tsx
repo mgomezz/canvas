@@ -1,3 +1,12 @@
+/**
+ * DraggableOnPath Component with Zoom Support
+ * 
+ * Features:
+ * - Drag a circle that's constrained to stay within a defined SVG path area
+ * - Mouse wheel zoom centered on the middle of the SVG (zoom range: 0.5x to 4x)
+ * - Double-click to reset zoom to 1x and center the view
+ * - Smooth zooming using SVG viewBox manipulation
+ */
 import React, { useEffect, useRef, useState } from 'react';
 
 type Props = {
@@ -8,11 +17,42 @@ type Props = {
 };
 
 export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svgViewBox }) => {
+    // Zoom configuration
+    const ZOOM_MIN = 0.5;
+    const ZOOM_MAX = 4.0;
+    const ZOOM_STEP = 0.1;
+
+    // Component state
     const [pos, setPos] = useState(initialPos);
+    const [zoom, setZoom] = useState(1.0);
     const dragging = useRef(false);
     const svgRef = useRef<SVGSVGElement>(null);
     const svgPathRef = useRef<SVGPathElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // Parse the initial viewBox to get dimensions
+    const parseViewBox = (viewBoxStr: string) => {
+        const parts = viewBoxStr.trim().split(/\s+/);
+        return {
+            x: parseFloat(parts[0]),
+            y: parseFloat(parts[1]),
+            width: parseFloat(parts[2]),
+            height: parseFloat(parts[3])
+        };
+    };
+
+    const originalViewBox = parseViewBox(svgViewBox);
+
+    // Calculate zoomed viewBox centered on the middle of the original viewBox
+    const getZoomedViewBox = (zoomLevel: number) => {
+        const newWidth = originalViewBox.width / zoomLevel;
+        const newHeight = originalViewBox.height / zoomLevel;
+        const centerX = originalViewBox.x + originalViewBox.width / 2;
+        const centerY = originalViewBox.y + originalViewBox.height / 2;
+        const newX = centerX - newWidth / 2;
+        const newY = centerY - newHeight / 2;
+        return `${newX} ${newY} ${newWidth} ${newHeight}`;
+    };
 
     // Helper to convert mouse event to SVG coords
     function getSVGPointFromEvent(e: MouseEvent | React.MouseEvent) {
@@ -99,6 +139,22 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svg
         window.removeEventListener('mouseup', handleMouseUp);
     }
 
+    // Handle mouse wheel for zooming
+    function handleWheel(e: WheelEvent) {
+        e.preventDefault();
+        const direction = e.deltaY < 0 ? 1 : -1; // Scroll up = zoom in, scroll down = zoom out
+        const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom + direction * ZOOM_STEP));
+        if (newZoom !== zoom) {
+            setZoom(newZoom);
+        }
+    }
+
+    // Handle double-click to reset zoom
+    function handleDoubleClick(e: React.MouseEvent) {
+        e.preventDefault();
+        setZoom(1.0);
+    }
+
     // Draw the path on canvas for hit testing (not visible)
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -116,11 +172,25 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svg
         ctx.restore();
     }, [pathD, width, 0]);
 
+    // Set up wheel event listener for zooming
+    useEffect(() => {
+        const svg = svgRef.current;
+        if (!svg) return;
+
+        svg.addEventListener('wheel', handleWheel, { passive: false });
+        return () => svg.removeEventListener('wheel', handleWheel);
+    }, [zoom]); // Include zoom in dependencies to update handler when zoom changes
+
     return (
         <div style={{ position: 'relative', width }}>
             {/* Hidden canvas for hit testing */}
             <canvas ref={canvasRef} width={width} style={{ display: 'none' }} />
-            <svg ref={svgRef} viewBox={svgViewBox}>
+            <svg 
+                ref={svgRef} 
+                viewBox={getZoomedViewBox(zoom)}
+                onDoubleClick={handleDoubleClick}
+                style={{ cursor: 'default' }}
+            >
                 <path
                     style={{
                         fill: 'none',

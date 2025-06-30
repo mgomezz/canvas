@@ -96,3 +96,6 @@ Thumbs.db
 *.mov
 *.wmv
 
+# React build output
+build/
+
