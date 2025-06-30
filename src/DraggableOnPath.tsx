@@ -1,13 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 type Props = {
     pathD: string; // SVG path data for the area
     initialPos: { x: number; y: number };
-    radius: number;
     width: number;
+    svgViewBox: string; // Optional viewBox for the SVG
 };
 
-export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, radius, width }) => {
+export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svgViewBox }) => {
     const [pos, setPos] = useState(initialPos);
     const dragging = useRef(false);
     const svgRef = useRef<SVGSVGElement>(null);
@@ -61,7 +61,7 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, radius, wi
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         const path2d = new window.Path2D(pathD);
-        if (isCircleFullyInsidePath(point.x, point.y, radius, path2d, ctx)) {
+        if (isCircleFullyInsidePath(point.x, point.y, 20, path2d, ctx)) {
             setPos({ x: point.x, y: point.y });
         }
     }
@@ -93,7 +93,7 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, radius, wi
         <div style={{ position: 'relative', width }}>
             {/* Hidden canvas for hit testing */}
             <canvas ref={canvasRef} width={width} style={{ display: 'none' }} />
-            <svg ref={svgRef} viewBox="0 0 1512.41 3927.08">
+            <svg ref={svgRef} viewBox={svgViewBox}>
                 <path
                     style={{
                         fill: 'none',
@@ -118,7 +118,7 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, radius, wi
                 <circle
                     cx={pos.x}
                     cy={pos.y}
-                    r={radius}
+                    r={20}
                     fill="#3498db"
                     stroke="#2c3e50"
                     strokeWidth={2}
