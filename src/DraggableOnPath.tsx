@@ -45,6 +45,30 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svg
         return true;
     }
 
+    // Checks if a rectangle is fully inside the path area
+    function isRectFullyInsidePath(
+        x: number, // top-left x of the div (in SVG coordinates)
+        y: number, // top-left y of the div (in SVG coordinates)
+        width: number, // width of the div
+        height: number, // height of the div
+        path2d: Path2D,
+        ctx: CanvasRenderingContext2D,
+    ) {
+        // Test all corners of the rectangle
+        const points = [
+            [x, y], // top-left
+            [x + width, y], // top-right
+            [x, y + height], // bottom-left
+            [x + width, y + height], // bottom-right
+        ];
+        for (const [px, py] of points) {
+            if (!ctx.isPointInPath(path2d, px, py)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     function handleMouseDown(e: React.MouseEvent) {
         e.preventDefault();
         dragging.current = true;
@@ -61,6 +85,9 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, width, svg
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         const path2d = new window.Path2D(pathD);
+
+        //TODO:add here use cases for different shapes
+        //to check circles
         if (isCircleFullyInsidePath(point.x, point.y, 20, path2d, ctx)) {
             setPos({ x: point.x, y: point.y });
         }
