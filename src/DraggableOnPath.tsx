@@ -94,7 +94,27 @@ export const DraggableOnPath: React.FC<Props> = ({ pathD, initialPos, radius, wi
             {/* Hidden canvas for hit testing */}
             <canvas ref={canvasRef} width={width} style={{ display: 'none' }} />
             <svg ref={svgRef} viewBox="0 0 1512.41 3927.08">
-                <path ref={svgPathRef} d={pathD} fill="#eee" stroke="#444" strokeWidth={2} />
+                <path
+                    style={{
+                        fill: 'none',
+                        stroke: '#008b34',
+                        strokeLinecap: 'square',
+                        strokeMiterlimit: 10,
+                        strokeWidth: 2.13,
+                    }}
+                    d="M1511.29,555.5l-134.93,333.05L206.39,3926.32l-118.18-.13s-3.35-19.65-7.81-56.18c-3.53-29.02-9.79-69.79-15.11-121.24C30.58,3413.32,6.53,2652.84.91,1894.14c-1.49-201.71,8.2-391.84,15.58-574.21,10.12-250.11,24.65-485.6,80.01-716.31C235.41,24.81,646.97-36.28,858.17,15.32c178.37,43.58,347.4,123.13,510.99,379.8,48.74,76.47,142.12,160.38,142.12,160.38h.01Z"
+                />
+                <path
+                    ref={svgPathRef}
+                    d={pathD}
+                    style={{
+                        fill: 'white',
+                        stroke: '#e5222e',
+                        strokeLinecap: 'square',
+                        strokeMiterlimit: 10,
+                        strokeWidth: 2.13,
+                    }}
+                />
                 <circle
                     cx={pos.x}
                     cy={pos.y}
