@@ -5,7 +5,7 @@ type Props = {
     pathDraggableAndEditable: string; // SVG path data for draggable and editable area
     initialPos: { x: number; y: number };
     width: number;
-    svgViewBox: string; // Optional viewBox for the SVG
+    svgViewBox: string; // viewBox for the SVG
 };
 
 export const DraggableOnPath: React.FC<Props> = ({
@@ -125,8 +125,10 @@ export const DraggableOnPath: React.FC<Props> = ({
 
     return (
         <div style={{ position: 'relative', width }}>
-            {/* Hidden canvas for hit testing */}
+            {/* Hidden canvas to get svg data*/}
             <canvas ref={canvasRef} width={width} style={{ display: 'none' }} />
+
+            {/* TODO: Add use cases for polygons, rectangles, etc. */}
             <svg ref={svgRef} viewBox={svgViewBox}>
                 <path
                     style={{
@@ -149,6 +151,8 @@ export const DraggableOnPath: React.FC<Props> = ({
                         strokeWidth: 2.13,
                     }}
                 />
+
+                {/* TODO: replace this circle with a moveable element */}
                 <circle
                     cx={pos.x}
                     cy={pos.y}
